@@ -1,0 +1,42 @@
+# Core Python packages
+pandas
+numpy
+scikit-learn
+matplotlib
+seaborn
+plotly
+jupyter
+notebook
+
+# Resume Parsing / PDF Extraction
+pymupdf          # (also called: fitz)
+pdfplumber
+
+# NLP / Embeddings / Transformers
+spacy
+spacy-transformers
+sentence-transformers
+nltk
+regex
+
+# Deep Learning
+torch
+torchvision
+tensorflow       # optional, use only if needed
+keras            # optional
+
+# OCR / Image Processing
+pillow
+opencv-python
+pytesseract
+
+# Forecasting (if needed)
+prophet          # or: pystan==2.19.1.1 required for prophet on some systems
+
+# Data cleaning helpers
+beautifulsoup4
+lxml
+
+# Dashboard / App
+streamlit
+psycopg2-binary
