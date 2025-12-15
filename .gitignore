@@ -5,3 +5,4 @@ notebooks/processed/
 
 # Or ignore all CSVs (optional but safe)
 *.csv
+.env
