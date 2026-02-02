@@ -143,375 +143,442 @@ def prepare_employee_features(df_raw: pd.DataFrame, feature_list: list) -> pd.Da
 
 
 # ===============================================================
-# STREAMLIT UI SETUP
+# STREAMLIT UI SETUP & CUSTOM CSS
 # ===============================================================
-st.set_page_config(layout="wide", page_title="T-IQ Dashboard")
-st.title("T-IQ — Talent Intelligence & Workforce Optimization")
+st.set_page_config(layout="wide", page_title="T-IQ | Talent Intelligence Suite", page_icon="🧠")
 
-st.sidebar.header("Modules")
+# Custom CSS for Professional UI
+st.markdown("""
+<style>
+    /* Global Font & Background */
+    html, body, [class*="css"] {
+        font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    }
+    
+    /* Sidebar Styling */
+    [data-testid="stSidebar"] {
+        background-color: #f8f9fa;
+        border-right: 1px solid #e9ecef;
+    }
+    
+    /* Card-like Containers */
+    .stMetric {
+        background-color: #ffffff;
+        padding: 15px;
+        border-radius: 8px;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+        border: 1px solid #e9ecef;
+    }
+    
+    /* Headers */
+    h1, h2, h3 {
+        color: #2c3e50;
+        font-weight: 600;
+    }
+    h1 {
+        border-bottom: 2px solid #3498db;
+        padding-bottom: 10px;
+        margin-bottom: 20px;
+    }
+    
+    /* Success/Error/Info Messages */
+    .stAlert {
+        border-radius: 8px;
+    }
+    
+    /* Buttons */
+    .stButton>button {
+        background-color: #3498db;
+        color: white;
+        border-radius: 6px;
+        border: none;
+        padding: 0.5rem 1rem;
+        font-weight: 500;
+        transition: all 0.3s;
+    }
+    .stButton>button:hover {
+        background-color: #2980b9;
+        color: white;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    }
+</style>
+""", unsafe_allow_html=True)
+
+# Header
+col1, col2 = st.columns([1, 5])
+with col1:
+    # Placeholder for Logo
+    st.markdown("## 🧠") 
+with col2:
+    st.title("T-IQ — Talent Intelligence Suite")
+    st.markdown("**AI-Powered Workforce Optimization & Analytics Dashboard**")
+
+st.markdown("---")
+
+# Navigation
+st.sidebar.title("Navigation")
+st.sidebar.markdown("Select a module below:")
+
 module = st.sidebar.radio(
-    "Choose Module",
+    "",
     [
-        "HR Analytics",
-        "Resume → Job Match",
-        "Sentiment Analysis",
-        "Document OCR & Classification",
-        "HR Chatbot & LLM Tools",
-        "View Models / Files",
-    ]
+        "📊 HR Analytics",
+        "📄 Resume → Job Match",
+        "😊 Sentiment Analysis",
+        "🔍 Document OCR",
+        "🤖 AI Assistant",
+        "📂 System Files"
+    ],
+    index=0
 )
+
+st.sidebar.markdown("---")
+st.sidebar.info("System Status: **Online** ✅")
 
 # ===============================================================
 # 1️⃣ HR ANALYTICS
 # ===============================================================
-if module == "HR Analytics":
-    st.header("Attrition & Performance Prediction")
-    uploaded = st.file_uploader("Upload Employee CSV Row", type=["csv"])
+if "HR Analytics" in module:
+    st.markdown("### 📊 Attrition & Performance Analytics")
+    st.markdown("Predict employee flight risk and future performance scores using historical data.")
+    
+    with st.expander("ℹ️ How to use"):
+        st.write("Upload a CSV file containing employee details (e.g., Age, Department, Salary, etc.) to get real-time predictions.")
+
+    uploaded = st.file_uploader("Upload Employee Data (CSV)", type=["csv"])
 
     if uploaded:
         df = pd.read_csv(uploaded)
-        st.write("Input:", df)
+        st.markdown("#### Input Data Preview")
+        st.dataframe(df.head(), use_container_width=True)
 
+        # Feature Prep & Prediction
         try:
             perf_feat = models["performance"]["features"]
-
             # extract attrition feature names
             if hasattr(models["attrition"], "feature_names_in_"):   
                 attr_feat = list(models["attrition"].feature_names_in_)
             else:
                 attr_feat = perf_feat  # fallback
 
-            # build union
             all_features = list(sorted(set(perf_feat + attr_feat)))
-
-            # prepare X correctly
             X = prepare_employee_features(df, all_features)
 
         except Exception as e:
-            st.error(f"Feature prep error: {e}")
+            st.error(f"❌ Feature preparation failed: {e}")
             st.stop()
 
+        st.markdown("---")
+        st.markdown("#### 🎯 Prediction Results")
+        
+        c1, c2 = st.columns(2)
+
         # Performance Prediction
-        if models["performance"]:
-            try:
-                pm = models["performance"]
-                X_scaled = pm["scaler"].transform(X[pm["features"]])
-                pred = pm["model"].predict(X_scaled)[0]
-                st.metric("Predicted Performance", f"{pred:.2f}")
-            except Exception as e:
-                st.error(f"Performance Error: {e}")
+        with c1:
+            if models["performance"]:
+                try:
+                    pm = models["performance"]
+                    X_scaled = pm["scaler"].transform(X[pm["features"]])
+                    pred = pm["model"].predict(X_scaled)[0]
+                    
+                    st.metric("Predicted Performance Score", f"{pred:.2f}", delta="Target: 3.0+")
+                    if pred < 3:
+                        st.warning("⚠️ Low performance predicted.")
+                    else:
+                        st.success("✅ Good performance expected.")
+                except Exception as e:
+                    st.error(f"Performance Error: {e}")
+            else:
+                st.warning("Performance model not loaded.")
 
         # Attrition Prediction
-        if models["attrition"]:
-            try:
-                needed = list(models["attrition"].feature_names_in_)
-                prob = models["attrition"].predict_proba(X[needed])[0, 1]
-                st.metric("Attrition Risk", f"{prob:.3f}")
-            except Exception as e:
-                st.error(f"Attrition Error: {e}")
+        with c2:
+            if models["attrition"]:
+                try:
+                    needed = list(models["attrition"].feature_names_in_)
+                    prob = models["attrition"].predict_proba(X[needed])[0, 1]
+                    
+                    st.metric("Attrition Risk Probability", f"{prob:.1%}", delta_color="inverse")
+                    
+                    if prob > 0.5:
+                        st.error("🚨 High Flight Risk Detected!")
+                    else:
+                        st.success("🛡️ Low Retention Risk")
+                except Exception as e:
+                    st.error(f"Attrition Error: {e}")
+            else:
+                st.warning("Attrition model not loaded.")
 
 # ===============================================================
 # 2️⃣ RESUME → JOB MATCH
 # ===============================================================
-elif module == "Resume → Job Match":
-    st.header("Resume to Job Matching")
+elif "Resume → Job Match" in module:
+    st.markdown("### 📄 Intelligent Resume Matching")
+    st.markdown("Match candidate resumes against open job descriptions using semantic search.")
 
-    resume_file = st.file_uploader("Upload Resume (txt/pdf)", type=["txt", "pdf"])
-    top_n = st.slider("Top N Jobs", 1, 10, 5)
+    c1, c2 = st.columns([1, 2])
+    with c1:
+        resume_file = st.file_uploader("Upload Profile (PDF/TXT)", type=["txt", "pdf"])
+        top_n = st.slider("Number of Matches", 1, 10, 5)
+    
+    with c2:
+        if resume_file:
+            if resume_file.type == "text/plain":
+                text = resume_file.read().decode()
+            else:
+                try:
+                    import fitz
+                    pdf = fitz.open(stream=resume_file.read(), filetype="pdf")
+                    text = "".join([page.get_text() for page in pdf])
+                except:
+                    st.error("Cannot read PDF.")
+                    text = ""
+            st.text_area("Resume Preview", text, height=150)
+        else:
+            st.info("👈 Upload a resume to see matches here.")
 
     if resume_file:
-        if resume_file.type == "text/plain":
-            text = resume_file.read().decode()
-        else:
-            try:
-                import fitz
-                pdf = fitz.open(stream=resume_file.read(), filetype="pdf")
-                text = "".join([page.get_text() for page in pdf])
-            except:
-                st.error("Cannot read PDF.")
-                text = ""
-
-        st.write("Resume Preview:", text[:1000])
-
         try:
             jobs = pd.read_csv(os.path.join(PROCESSED, "job_descriptions_clean.csv"))
             
-            # Debug: Show available columns
-            st.write("Available columns in job data:", list(jobs.columns))
-            
-            # Check for common job title column names
-            title_column = None
-            possible_title_columns = ['positionName', 'job_title', 'title', 'position', 'role', 'Job Title']
-            
-            for col in possible_title_columns:
-                if col in jobs.columns:
-                    title_column = col
-                    break
-            
-            if title_column is None:
-                # If no standard title column found, use the first column or create a generic one
-                if len(jobs.columns) > 0:
-                    title_column = jobs.columns[0]
-                    st.warning(f"No standard job title column found. Using '{title_column}' as job title.")
-                else:
-                    st.error("No columns found in job data.")
-                    st.stop()
-            
-            # Check for description column
-            desc_column = None
-            possible_desc_columns = ['clean_description', 'description', 'job_description', 'desc']
-            
-            for col in possible_desc_columns:
-                if col in jobs.columns:
-                    desc_column = col
-                    break
-            
-            if desc_column is None:
-                st.error("No description column found in job data.")
-                st.stop()
-            
-            job_texts = jobs[desc_column].astype(str).tolist()
+            # Identify columns
+            title_col = next((c for c in ['positionName', 'job_title', 'title', 'role'] if c in jobs.columns), jobs.columns[0])
+            desc_col = next((c for c in ['clean_description', 'description', 'job_description'] if c in jobs.columns), None)
 
-            if models["embedder"] is None:
-                st.error("Embedding model not loaded.")
+            if not desc_col:
+                st.error("Job Database Error: No description column found.")
                 st.stop()
 
-            emb_resume = models["embedder"].encode(text, convert_to_tensor=True)
-            emb_jobs = models["embedder"].encode(job_texts, convert_to_tensor=True)
+            job_texts = jobs[desc_col].astype(str).tolist()
 
-            sim = util.cos_sim(emb_resume, emb_jobs)[0]
-            topk = torch.topk(sim, k=min(top_n, len(job_texts)))
+            if models["embedder"]:
+                with st.spinner("Computing semantic similarity..."):
+                    emb_resume = models["embedder"].encode(text, convert_to_tensor=True)
+                    emb_jobs = models["embedder"].encode(job_texts, convert_to_tensor=True)
 
-            results = []
-            for score, idx in zip(topk.values, topk.indices):
-                idx = int(idx)   # Convert tensor to integer
-                results.append({
-                    "Job Title": jobs.iloc[idx][title_column],
-                    "Score": float(score),
-                    "Description": str(jobs.iloc[idx][desc_column])[:300] + "...",
-                })
+                    sim = util.cos_sim(emb_resume, emb_jobs)[0]
+                    topk = torch.topk(sim, k=min(top_n, len(job_texts)))
 
-            st.table(pd.DataFrame(results))
-            
-        except FileNotFoundError:
-            st.error(f"Job descriptions file not found at: {os.path.join(PROCESSED, 'job_descriptions_clean.csv')}")
+                st.markdown("#### 🏆 Top Matched Roles")
+                results = []
+                for score, idx in zip(topk.values, topk.indices):
+                    idx = int(idx)
+                    results.append({
+                        "Job Title": jobs.iloc[idx][title_col],
+                        "Match Score": f"{float(score):.1%}",
+                        "Preview": str(jobs.iloc[idx][desc_col])[:150] + "..."
+                    })
+                
+                st.dataframe(pd.DataFrame(results), use_container_width=True)
+
+            else:
+                st.error("Embedding model unavailable.")
+                
         except Exception as e:
-            st.error(f"Error processing job matching: {str(e)}")
-
+            st.error(f"Error: {e}")
 
 # ===============================================================
 # 3️⃣ SENTIMENT ANALYSIS
 # ===============================================================
-elif module == "Sentiment Analysis":
-    st.header("Employee Review Sentiment")
+elif "Sentiment Analysis" in module:
+    st.markdown("### 😊 Employee Sentiment Analyzer")
+    st.markdown("Analyze employee reviews, feedback, or survey responses using TextBlob NLP.")
 
-    review = st.text_area("Paste employee review")
-    if st.button("Predict Sentiment"):
-        clf = models["sentiment"]["classifier"]
-        embedder = models["embedder"]
-        emb = embedder.encode([review])
-        pred = clf.predict(emb)[0]
-
-        st.success("Positive 👍" if pred == 1 else "Negative 👎")
-
+    review = st.text_area("Enter textual feedback:", height=150, placeholder="Type review here...")
+    
+    if st.button("Analyze Sentiment"):
+        try:
+            from textblob import TextBlob
+            blob = TextBlob(review)
+            polarity = blob.sentiment.polarity
+            subjectivity = blob.sentiment.subjectivity
+            
+            st.markdown("#### Analysis Result")
+            
+            # Determine sentiment category
+            if polarity > 0.1:
+                st.success(f"## Positive Sentiment 👍 (Score: {polarity:.2f})")
+            elif polarity < -0.1:
+                st.error(f"## Negative Sentiment 👎 (Score: {polarity:.2f})")
+            else:
+                st.warning(f"## Neutral Sentiment 😐 (Score: {polarity:.2f})")
+                
+            st.info(f"**Subjectivity:** {subjectivity:.2f} (0=Fact, 1=Opinion)")
+            
+        except ImportError:
+            st.error("TextBlob not installed. Please run `pip install textblob`.")
+        except Exception as e:
+            st.error(f"Error: {e}")
 
 # ===============================================================
-# 4️⃣ DOCUMENT OCR & CLASSIFICATION
+# 4️⃣ DOCUMENT OCR
 # ===============================================================
-elif module == "Document OCR & Classification":
-    st.header("Upload Document Image")
+elif "Document OCR" in module:
+    st.markdown("### 🔍 Document AI (OCR & Classification)")
+    st.markdown("Automatically extract text and classify HR documents (Resumes, IDs, Contracts).")
 
-    uploaded = st.file_uploader("Upload Image", type=["png", "jpg", "jpeg"])
+    uploaded = st.file_uploader("Upload Document (Image)", type=["png", "jpg", "jpeg"])
+    
     if uploaded:
+        c1, c2 = st.columns(2)
         img = Image.open(uploaded).convert("RGB")
-        st.image(img, width=500)
+        
+        with c1:
+            st.image(img, caption="Uploaded Document", use_column_width=True)
+        
+        with c2:
+            with st.spinner("Running OCR..."):
+                pytesseract.pytesseract.tesseract_cmd = r"C:\Program Files\Tesseract-OCR\tesseract.exe"
+                text = pytesseract.image_to_string(img)
+            
+            st.markdown("**Extracted Text:**")
+            st.code(text[:1000])
 
-        pytesseract.pytesseract.tesseract_cmd = r"C:\Program Files\Tesseract-OCR\tesseract.exe"
-        text = pytesseract.image_to_string(img)
-        st.text(text[:500])
+                # Classification Logic
+            doc_state = models["doc_state"]
+            if doc_state:
+                try:
+                    import torchvision.models as tv
+                    from torchvision import transforms
 
-        doc_state = models["doc_state"]
-        if doc_state:
-            try:
-                import torchvision.models as tv
-                from torchvision import transforms
-
-                # Debug: Show available keys in doc_state
-                st.write("Available keys in model state:", list(doc_state.keys()))
-
-                # Default document classes (common HR documents)
-                default_classes = {
-                    0: "Resume/CV",
-                    1: "Job Description",
-                    2: "Employment Contract",
-                    3: "Performance Review",
-                    4: "Leave Application",
-                    5: "Offer Letter",
-                    6: "ID Document",
-                    7: "Other"
-                }
-
-                # Check for idx2label or similar mapping
-                label_map = None
-                ncls = None
-
-                if "idx2label" in doc_state:
-                    label_map = doc_state["idx2label"]
-                    ncls = len(label_map)
-                elif "class_to_idx" in doc_state:
-                    # Reverse the mapping if class_to_idx exists
-                    label_map = {v: k for k, v in doc_state["class_to_idx"].items()}
-                    ncls = len(label_map)
-                elif "classes" in doc_state:
-                    label_map = {i: cls for i, cls in enumerate(doc_state["classes"])}
-                    ncls = len(label_map)
-                elif "num_classes" in doc_state:
-                    ncls = doc_state["num_classes"]
-                    label_map = {i: default_classes.get(i, f"Class_{i}") for i in range(ncls)}
-                else:
-                    # Try to infer number of classes from state_dict
-                    if "state_dict" in doc_state:
+                    # --- Class Mapping Logic ---
+                    # 1. Determine State Dict vs Full Model
+                    if isinstance(doc_state, dict) and "state_dict" in doc_state:
                         state_dict = doc_state["state_dict"]
-                    else:
+                    elif isinstance(doc_state, dict):
                         state_dict = doc_state
-                    
-                    # Look for the final layer to determine number of classes
-                    for key in state_dict.keys():
-                        if "fc.weight" in key or "classifier.weight" in key or "fc.bias" in key:
-                            if "weight" in key:
-                                ncls = state_dict[key].shape[0]
-                            elif "bias" in key:
-                                ncls = state_dict[key].shape[0]
-                            break
-                    
-                    if ncls is not None:
-                        # Use default classes or generic labels
-                        label_map = {i: default_classes.get(i, f"Document_Type_{i}") for i in range(ncls)}
-                        st.info(f"Inferred {ncls} document classes from model architecture")
                     else:
-                        # Last resort: assume common number of classes
-                        ncls = 8
-                        label_map = default_classes
-                        st.warning(f"Could not determine classes from model. Using default {ncls} document types.")
-                
-                if label_map is None or ncls is None:
-                    st.error("Could not determine document classes from model.")
-                    st.stop()
+                        st.error("Unknown model format.")
+                        st.stop()
 
-                st.write(f"**Document Classes ({ncls} types):**")
-                for idx, label in label_map.items():
-                    st.write(f"  - {idx}: {label}")
+                    # 2. Infer Number of Classes (ncls) from weights
+                    ncls = 8 # Fallback
+                    if "fc.weight" in state_dict:
+                        ncls = state_dict["fc.weight"].shape[0]
+                    elif "classifier.weight" in state_dict: # MobileNet/VGG
+                        ncls = state_dict["classifier.weight"].shape[0]
+                    elif "fc.bias" in state_dict:
+                        ncls = state_dict["fc.bias"].shape[0]
+                    
+                    st.info(f"Detected {ncls} document classes from model file.")
 
-                # Load model
-                model = tv.resnet50(weights=None)
-                model.fc = torch.nn.Linear(model.fc.in_features, ncls)
-                
-                if "state_dict" in doc_state:
-                    model.load_state_dict(doc_state["state_dict"])
-                else:
-                    model.load_state_dict(doc_state)
-                
-                model.eval()
+                    # 3. Define Label Map based on ncls
+                    # If ncls is 4, we assume a specific subset (e.g., Resume, ID, etc.)
+                    # Ideally, the model should store its own classes, but we can map common ones.
+                    if ncls == 4:
+                        default_classes = {0: "Resume", 1: "ID Card", 2: "Contract", 3: "Other"} # Example guess
+                    else:
+                        default_classes = {i: f"Type_{i}" for i in range(ncls)}
+                        # Try to use standard mapping if ncls matches 8
+                        if ncls == 8:
+                            default_classes = {0: "Resume", 1: "Job Desc", 2: "Contract", 3: "Review", 4: "Leave App", 5: "Offer Letter", 6: "ID Card", 7: "Other"}
 
-                # Preprocess image
-                transform = transforms.Compose([
-                    transforms.Resize((256, 256)),
-                    transforms.CenterCrop(224),
-                    transforms.ToTensor(),
-                    transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
-                ])
-                
-                x = transform(img).unsqueeze(0)
+                    # 4. Load Model
+                    model = tv.resnet50(weights=None)
+                    model.fc = torch.nn.Linear(model.fc.in_features, ncls)
+                    model.load_state_dict(state_dict)
+                    model.eval()
 
-                # Predict
-                with torch.no_grad():
-                    logits = model(x)
-                    pred = logits.argmax().item()
-                    probs = torch.nn.functional.softmax(logits, dim=1)[0]
-                
-                st.success(f"**Predicted Document Type:** {label_map[pred]}")
-                st.metric("Confidence", f"{probs[pred].item():.2%}")
-                
-                # Show all confidence scores
-                st.write("**All Confidence Scores:**")
-                prob_df = pd.DataFrame({
-                    "Document Type": [label_map[i] for i in range(ncls)],
-                    "Confidence": [f"{probs[i].item():.2%}" for i in range(ncls)],
-                    "Score": [probs[i].item() for i in range(ncls)]
-                })
-                prob_df = prob_df.sort_values("Score", ascending=False)
-                st.dataframe(prob_df[["Document Type", "Confidence"]], hide_index=True)
-                        
-            except Exception as e:
-                st.error(f"Error during document classification: {str(e)}")
-                import traceback
-                st.code(traceback.format_exc())
-        else:
-            st.warning("Document classifier not found.")
+                    # Transform
+                    transform = transforms.Compose([
+                        transforms.Resize((256, 256)), transforms.CenterCrop(224),
+                        transforms.ToTensor(), transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
+                    ])
+                    x = transform(img).unsqueeze(0)
+                    
+                    with torch.no_grad():
+                        logits = model(x)
+                        probs = torch.nn.functional.softmax(logits, dim=1)[0]
+                        pred_idx = logits.argmax().item()
 
+                    st.markdown("#### Classification Result")
+                    # Safe get
+                    label_str = default_classes.get(pred_idx, f"Class {pred_idx}")
+                    st.info(f"**Document Type:** {label_str}")
+                    
+                    st.progress(float(probs[pred_idx]))
+                    st.caption(f"Confidence: {probs[pred_idx]:.1%}")
+                    
+                    with st.expander("See all scores"):
+                         scores = {default_classes.get(i, f"C{i}"): float(probs[i]) for i in range(ncls)}
+                         st.write(scores)
+
+                except Exception as e:
+                    st.warning(f"Classification skipped: {e}")
 
 # ===============================================================
-# 5️⃣ HR CHATBOT & LLM TOOLS
+# 5️⃣ AI ASSISTANT
 # ===============================================================
-elif module == "HR Chatbot & LLM Tools":
-    st.header("AI HR Assistant")
+elif "AI Assistant" in module:
+    st.markdown("### 🤖 Intelligent HR Assistant")
+    st.markdown("Leverage GenAI for creating JDs, summarizing interviews, and answering HR queries.")
 
-    tool = st.selectbox("Choose Tool", [
-        "HR Chatbot",
-        "Interview Transcript Summarizer",
-        "Resume Improve+ment Feedback",
-        "Job Description Generator",
-        "Employee Review Analyzer",
+    tab1, tab2, tab3, tab4, tab5 = st.tabs([
+        "💬 Chatbot", 
+        "📝 Transcript Summary", 
+        "📄 Resume Fixer", 
+        "✍️ JD Generator",
+        "📢 Review Analyzer"
     ])
 
-    # Chatbot
-    if tool == "HR Chatbot":
-        msg = st.text_area("Ask HR Assistant")
-        if st.button("Ask"):
-            reply = chat_with_hr_bot(msg)
-            st.write(reply["response"])
+    with tab1:
+        st.markdown("#### HR Knowledge Bot")
+        msg = st.text_area("Ask a question:", height=100)
+        if st.button("Send", key="chat_btn"):
+            with st.spinner("Thinking..."):
+                reply = chat_with_hr_bot(msg)
+            st.markdown(f"**Assistant:** {reply['response']}")
 
-    # Interview Summarizer
-    elif tool == "Interview Transcript Summarizer":
-        file = st.file_uploader("Upload transcript", type=["txt", "pdf"])
-        if file:
-            tmp = "tmp_tr.pdf" if file.type == "application/pdf" else "tmp_tr.txt"
-            with open(tmp, "wb") as f:
-                f.write(file.read())
-            txt = safe_read_pdf_bytes(tmp) if tmp.endswith(".pdf") else safe_read_txt(tmp)
-            st.text_area("Summary", summarize_interview_transcript(txt), height=300)
+    with tab2:
+        st.markdown("#### Interview Summarizer")
+        tr_file = st.file_uploader("Upload Transcript", type=["txt", "pdf"], key="tr_up")
+        if tr_file:
+             # Process file wrapper
+             tmp = "tmp_tr.pdf" if tr_file.type == "application/pdf" else "tmp_tr.txt"
+             with open(tmp, "wb") as f: f.write(tr_file.read())
+             txt = safe_read_pdf_bytes(tmp) if tmp.endswith(".pdf") else safe_read_txt(tmp)
+             if st.button("Summarize"):
+                 st.write(summarize_interview_transcript(txt))
 
-    # Resume Feedback
-    elif tool == "Resume Improvement Feedback":
-        file = st.file_uploader("Upload resume", type=["txt", "pdf"])
-        role = st.text_input("Target Role")
-        if file:
-            tmp = "tmp_r.pdf" if file.type == "application/pdf" else "tmp_r.txt"
-            with open(tmp, "wb") as f:
-                f.write(file.read())
-            txt = safe_read_pdf_bytes(tmp) if tmp.endswith(".pdf") else safe_read_txt(tmp)
-            st.text_area("Feedback", resume_improvement_feedback(txt, role_target=role))
+    with tab3:
+        st.markdown("#### Resume Improvement")
+        res_file = st.file_uploader("Upload Resume", type=["txt", "pdf"], key="res_up")
+        tgt_role = st.text_input("Target Role Name")
+        if res_file and st.button("Analyze Resume"):
+             tmp = "tmp_r.pdf" if res_file.type == "application/pdf" else "tmp_r.txt"
+             with open(tmp, "wb") as f: f.write(res_file.read())
+             txt = safe_read_pdf_bytes(tmp) if tmp.endswith(".pdf") else safe_read_txt(tmp)
+             st.write(resume_improvement_feedback(txt, role_target=tgt_role))
 
-    # JD Generator
-    elif tool == "Job Description Generator":
-        role = st.text_input("Role")
-        skills = st.text_area("Skills")
-        seniority = st.selectbox("Seniority", ["Junior", "Mid", "Senior"])
-        if st.button("Generate"):
-            st.text_area("Job Description", generate_job_description(role, skills, seniority))
+    with tab4:
+        st.markdown("#### Job Description Generator")
+        c1, c2 = st.columns(2)
+        r_name = c1.text_input("Role Title")
+        r_lvl = c2.selectbox("Seniority", ["Entry", "Mid-Level", "Senior", "Executive"])
+        r_skills = st.text_area("Key Skills / Tech Stack")
+        if st.button("Generate JD"):
+            st.markdown(generate_job_description(r_name, r_skills, r_lvl))
 
-    # Review Analyzer
-    elif tool == "Employee Review Analyzer":
-        review = st.text_area("Paste review")
-        if st.button("Analyze"):
-            st.text_area("Analysis", analyze_employee_review(review))
-
+    with tab5:
+        st.markdown("#### Performance Review Analyzer")
+        rev_text = st.text_area("Paste Review Text")
+        if st.button("Analyze Review"):
+            st.write(analyze_employee_review(rev_text))
 
 # ===============================================================
-# 6️⃣ VIEW FILES / MODELS
+# 6️⃣ SYSTEM FILES
 # ===============================================================
-elif module == "View Models / Files":
-    st.header("Available Models & Files")
-    st.write(os.listdir(MODELS_DIR))
-    st.write(os.listdir(PROCESSED))
-    st.write(os.listdir(OUTPUT_DIR))
+elif "System Files" in module:
+    st.markdown("### 📂 System Diagnostics & File Explorer")
+    
+    c1, c2, c3 = st.columns(3)
+    with c1:
+        st.markdown("**Models Directory**")
+        st.code("\n".join(os.listdir(MODELS_DIR)))
+    with c2:
+        st.markdown("**Processed Data**")
+        st.code("\n".join(os.listdir(PROCESSED)))
+    with c3:
+        st.markdown("**Output Artifacts**")
+        st.code("\n".join(os.listdir(OUTPUT_DIR)))
+

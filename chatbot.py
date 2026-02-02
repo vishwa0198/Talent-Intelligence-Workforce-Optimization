@@ -20,11 +20,11 @@ except Exception:
 # Optionally load variables from a .env file (if python-dotenv is installed)
 try:
     from dotenv import load_dotenv  # type: ignore
-
     load_dotenv()
-except Exception:
-    # Safe to ignore; environment variables may already be set at OS level.
-    pass
+except ImportError:
+    print("WARNING: 'python-dotenv' not found. If you are using a .env file, please install it: pip install python-dotenv")
+except Exception as e:
+    print(f"WARNING: Error loading .env file: {e}")
 
 # Load OPENAI_API_KEY from env (or .env)
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")

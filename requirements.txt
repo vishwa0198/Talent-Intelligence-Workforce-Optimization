@@ -18,12 +18,15 @@ spacy-transformers
 sentence-transformers
 nltk
 regex
+textblob
 
 # Deep Learning
 torch
 torchvision
 tensorflow       # optional, use only if needed
 keras            # optional
+tf-keras
+tf-keras
 
 # OCR / Image Processing
 pillow
@@ -40,3 +43,4 @@ lxml
 # Dashboard / App
 streamlit
 psycopg2-binary
+python-dotenv
